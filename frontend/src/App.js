@@ -1,7 +1,7 @@
 import React from "react";
 import Form from "./components/Form"; // Updated to use the Form component
 
-function App() {
+const App = () => {
   return (
     <div className="App">
       <header style={{ padding: "20px", textAlign: "center", fontFamily: "Arial, sans-serif" }}>
@@ -18,6 +18,6 @@ function App() {
       </footer>
     </div>
   );
-}
+};
 
 export default App;

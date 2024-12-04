@@ -1,27 +1,28 @@
 import React, { useState } from "react";
+import { ref, push, set } from "firebase/database";
+import { ref as storageRef, uploadBytes } from "firebase/storage";
+import { db, storage } from "../firebase";
 
-const Form = () => {
+const ApplicationForm = () => {
   const [formData, setFormData] = useState({
-    name: "",
-    fatherHusbandName: "",
-    dob: "",
-    nationality: "",
-    address: "",
-    pincode: "",
-    mobile: "",
-    email: "",
+    name: '',
+    fatherName: '',
+    dob: '',
+    nationality: '',
+    address: '',
+    pinCode: '',
+    mobileNumber: '',
+    email: '',
     idProof: null,
     casteCertificate: null,
-    postalOrder: "",
-    education: [{ class: "", board: "", year: "", subjects: "", percentage: "", marksCard: null }],
-    experience: [
-      { post: "", employer: "", period: "", natureOfWork: "", salary: "", remainder: "", experienceCertificate: null },
-    ],
+    indianPostalOrder: '',
+    educationQualifications: [{}, {}, {}],
+    experienceDetails: [{}, {}, {}],
     noObjectionCertificate: null,
     pwdCertificate: null,
   });
 
-  const handleChange = (e, index = null, section = "") => {
+  const handleChange = (e) => {
     const { name, value, files } = e.target;
 
     if (section === "education") {
@@ -32,7 +33,7 @@ const Form = () => {
       const updatedExperience = [...formData.experience];
       updatedExperience[index][name] = files ? files[0] : value;
       setFormData({ ...formData, experience: updatedExperience });
-    } else if (files) {
+    } else if (name === "idProof" || name === "casteCertificate" || name === "noObjectionCertificate" || name === "pwdCertificate") {
       setFormData({ ...formData, [name]: files[0] });
     } else {
       setFormData({ ...formData, [name]: value });
@@ -42,169 +43,277 @@ const Form = () => {
   const handleAddEducationRow = () => {
     setFormData({
       ...formData,
-      education: [...formData.education, { class: "", board: "", year: "", subjects: "", percentage: "", marksCard: null }],
+      [name]: files ? files[0] : value,
     });
   };
 
-  const handleAddExperienceRow = () => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const formRef = push(ref(db, "applications"));
+    const key = formRef.key;
+
+    const uploadFile = async (file, path) => {
+      if (file) {
+        const storageReference = storageRef(storage, `documents/${key}/${path}`);
+        await uploadBytes(storageReference, file);
+      }
+    };
+
+    await uploadFile(formData.idProof, "idProof");
+    await uploadFile(formData.casteCertificate, "casteCertificate");
+    await uploadFile(formData.noObjectionCertificate, "noObjectionCertificate");
+    await uploadFile(formData.pwdCertificate, "pwdCertificate");
+
+    for (let i = 0; i < formData.education.length; i++) {
+      await uploadFile(formData.education[i].marksCard, `education/${i}/marksCard`);
+    }
+
+    for (let i = 0; i < formData.experience.length; i++) {
+      await uploadFile(formData.experience[i].experienceCertificate, `experience/${i}/experienceCertificate`);
+    }
+
+    await set(formRef, formData);
+    alert("Form submitted successfully!");
     setFormData({
-      ...formData,
+      name: "",
+      fatherHusbandName: "",
+      dob: "",
+      nationality: "",
+      address: "",
+      pincode: "",
+      mobile: "",
+      email: "",
+      idProof: null,
+      casteCertificate: null,
+      postalOrder: "",
+      education: [{ class: "", board: "", year: "", subjects: "", percentage: "", marksCard: null }],
       experience: [
-        ...formData.experience,
         { post: "", employer: "", period: "", natureOfWork: "", salary: "", remainder: "", experienceCertificate: null },
       ],
+      noObjectionCertificate: null,
+      pwdCertificate: null,
     });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const formDataToSend = { ...formData };
-    const formDataObject = new FormData();
-
-    // Append JSON data
-    formDataObject.append("formData", JSON.stringify(formDataToSend));
-
-    // Append files
-    if (formData.idProof) formDataObject.append("idProof", formData.idProof);
-    if (formData.casteCertificate) formDataObject.append("casteCertificate", formData.casteCertificate);
-    if (formData.noObjectionCertificate) formDataObject.append("noObjectionCertificate", formData.noObjectionCertificate);
-    if (formData.pwdCertificate) formDataObject.append("pwdCertificate", formData.pwdCertificate);
-
-    formData.education.forEach((edu, index) => {
-      if (edu.marksCard) {
-        formDataObject.append("educationMarksCards", edu.marksCard);
-      }
-    });
-
-    formData.experience.forEach((exp, index) => {
-      if (exp.experienceCertificate) {
-        formDataObject.append("experienceCertificates", exp.experienceCertificate);
-      }
-    });
-
-    try {
-      const response = await fetch("http://localhost:5000/api/submitForm", {
-        method: "POST",
-        body: formDataObject,
-      });
-
-      if (response.ok) {
-        alert("Form submitted successfully!");
-        setFormData({
-          name: "",
-          fatherHusbandName: "",
-          dob: "",
-          nationality: "",
-          address: "",
-          pincode: "",
-          mobile: "",
-          email: "",
-          idProof: null,
-          casteCertificate: null,
-          postalOrder: "",
-          education: [{ class: "", board: "", year: "", subjects: "", percentage: "", marksCard: null }],
-          experience: [
-            { post: "", employer: "", period: "", natureOfWork: "", salary: "", remainder: "", experienceCertificate: null },
-          ],
-          noObjectionCertificate: null,
-          pwdCertificate: null,
-        });
-      } else {
-        alert("Failed to submit the form.");
-      }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      alert("Error submitting the form.");
-    }
   };
 
   return (
     <form onSubmit={handleSubmit}>
+      <h2>Application Form</h2>
+
       <div>
         <label>Name:</label>
-        <input type="text" name="name" value={formData.name} onChange={handleChange} required />
+        <input
+          type="text"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+        />
       </div>
+
       <div>
         <label>Father/Husband's Name:</label>
-        <input type="text" name="fatherHusbandName" value={formData.fatherHusbandName} onChange={handleChange} />
+        <input
+          type="text"
+          name="fatherName"
+          value={formData.fatherName}
+          onChange={handleChange}
+        />
       </div>
+
       <div>
         <label>Date of Birth:</label>
-        <input type="date" name="dob" value={formData.dob} onChange={handleChange} required />
+        <input
+          type="date"
+          name="dob"
+          value={formData.dob}
+          onChange={handleChange}
+        />
       </div>
+
       <div>
         <label>Nationality:</label>
-        <input type="text" name="nationality" value={formData.nationality} onChange={handleChange} />
+        <input
+          type="text"
+          name="nationality"
+          value={formData.nationality}
+          onChange={handleChange}
+        />
       </div>
+
       <div>
         <label>Permanent Address:</label>
-        <textarea name="address" value={formData.address} onChange={handleChange}></textarea>
+        <textarea
+          name="address"
+          value={formData.address}
+          onChange={handleChange}
+        />
       </div>
+
       <div>
         <label>Pincode:</label>
-        <input type="text" name="pincode" value={formData.pincode} onChange={handleChange} />
+        <input
+          type="text"
+          name="pinCode"
+          value={formData.pinCode}
+          onChange={handleChange}
+        />
       </div>
+
       <div>
         <label>Mobile Number:</label>
-        <input type="text" name="mobile" value={formData.mobile} onChange={handleChange} />
+        <input
+          type="number"
+          name="mobileNumber"
+          value={formData.mobileNumber}
+          onChange={handleChange}
+        />
       </div>
+
       <div>
         <label>Email:</label>
-        <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+        <input
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+        />
       </div>
+
       <div>
         <label>ID Proof (Pan Card/Driving License/Aadhaar Card):</label>
-        <input type="file" name="idProof" onChange={handleChange} />
+        <input
+          type="file"
+          name="idProof"
+          onChange={handleChange}
+        />
       </div>
+
       <div>
         <label>Caste Certificate (Gen/SC/ST/OBC):</label>
-        <input type="file" name="casteCertificate" onChange={handleChange} />
+        <input
+          type="file"
+          name="casteCertificate"
+          onChange={handleChange}
+        />
       </div>
+
       <div>
         <label>Indian Postal Order:</label>
-        <input type="text" name="postalOrder" value={formData.postalOrder} onChange={handleChange} />
+        <input
+          type="text"
+          name="indianPostalOrder"
+          value={formData.indianPostalOrder}
+          onChange={handleChange}
+        />
       </div>
+
       <h3>Education Qualification:</h3>
-      {formData.education.map((edu, index) => (
+      <h5>Required Documents : 10th,12th and Gate Score</h5>
+      {formData.educationQualifications.map((_, index) => (
         <div key={index}>
-          <input type="text" name="class" placeholder="Class/Degree" value={edu.class} onChange={(e) => handleChange(e, index, "education")} />
-          <input type="text" name="board" placeholder="Board" value={edu.board} onChange={(e) => handleChange(e, index, "education")} />
-          <input type="text" name="year" placeholder="Year of Passing" value={edu.year} onChange={(e) => handleChange(e, index, "education")} />
-          <input type="text" name="subjects" placeholder="Subjects" value={edu.subjects} onChange={(e) => handleChange(e, index, "education")} />
-          <input type="text" name="percentage" placeholder="Percentage" value={edu.percentage} onChange={(e) => handleChange(e, index, "education")} />
-          <input type="file" name="marksCard" onChange={(e) => handleChange(e, index, "education")} />
+          <input
+            type="text"
+            name={`educationQualifications[${index}].class`}
+            placeholder="Class/Degree"
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            name={`educationQualifications[${index}].board`}
+            placeholder="Board"
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            name={`educationQualifications[${index}].year`}
+            placeholder="Year of Passing"
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            name={`educationQualifications[${index}].subjects`}
+            placeholder="Subjects"
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            name={`educationQualifications[${index}].percentage`}
+            placeholder="Percentage"
+            onChange={handleChange}
+          />
+          <input
+            type="file"
+            name={`educationQualifications[${index}].marksCard`}
+            onChange={handleChange}
+          />
         </div>
       ))}
-      <button type="button" onClick={handleAddEducationRow}>
-        Add More Education
-      </button>
+
       <h3>Details of Any Other Experience:</h3>
-      {formData.experience.map((exp, index) => (
+      {formData.experienceDetails.map((_, index) => (
         <div key={index}>
-          <input type="text" name="post" placeholder="Post Held" value={exp.post} onChange={(e) => handleChange(e, index, "experience")} />
-          <input type="text" name="employer" placeholder="Name of Employer" value={exp.employer} onChange={(e) => handleChange(e, index, "experience")} />
-          <input type="text" name="period" placeholder="Period (From - To)" value={exp.period} onChange={(e) => handleChange(e, index, "experience")} />
-          <input type="text" name="natureOfWork" placeholder="Nature of Work" value={exp.natureOfWork} onChange={(e) => handleChange(e, index, "experience")} />
-          <input type="text" name="salary" placeholder="Salary" value={exp.salary} onChange={(e) => handleChange(e, index, "experience")} />
-          <input type="text" name="remainder" placeholder="Remainder" value={exp.remainder} onChange={(e) => handleChange(e, index, "experience")} />
-          <input type="file" name="experienceCertificate" onChange={(e) => handleChange(e, index, "experience")} />
+          <input
+            type="text"
+            name={`experienceDetails[${index}].poetHired`}
+            placeholder="Poet Hired"
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            name={`experienceDetails[${index}].employer`}
+            placeholder="Name of Employer"
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            name={`experienceDetails[${index}].periodFrom`}
+            placeholder="Period (From)"
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            name={`experienceDetails[${index}].periodTo`}
+            placeholder="Period (To)"
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            name={`experienceDetails[${index}].natureOfWork`}
+            placeholder="Nature of Work"
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            name={`experienceDetails[${index}].salary`}
+            placeholder="Salary"
+            onChange={handleChange}
+          />
+          <input
+            type="text"
+            name={`experienceDetails[${index}].remainder`}
+            placeholder="Remainder"
+            onChange={handleChange}
+          />
+          <input
+            type="file"
+            name={`experienceDetails[${index}].experienceCertificate`}
+            onChange={handleChange}
+          />
         </div>
       ))}
-      <button type="button" onClick={handleAddExperienceRow}>
-        Add More Experience
-      </button>
+
       <div>
-        <label>No Objection Certificate:</label>
+        <label>No Objection Certificate (if applicable):</label>
         <input type="file" name="noObjectionCertificate" onChange={handleChange} />
       </div>
+
       <div>
-        <label>PwD Certificate:</label>
+        <label>PWD Certificate (if applicable):</label>
         <input type="file" name="pwdCertificate" onChange={handleChange} />
       </div>
+
       <button type="submit">Submit</button>
     </form>
   );
 };
 
-export default Form;
+export default ApplicationForm;

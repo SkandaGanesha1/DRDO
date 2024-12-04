@@ -1,7 +1,4 @@
 import React, { useState } from "react";
-import { ref, push, set } from "firebase/database";
-import { ref as storageRef, uploadBytes } from "firebase/storage";
-import { db, storage } from "../firebase";
 
 const Form = () => {
   const [formData, setFormData] = useState({
@@ -35,7 +32,7 @@ const Form = () => {
       const updatedExperience = [...formData.experience];
       updatedExperience[index][name] = files ? files[0] : value;
       setFormData({ ...formData, experience: updatedExperience });
-    } else if (name === "idProof" || name === "casteCertificate" || name === "noObjectionCertificate" || name === "pwdCertificate") {
+    } else if (files) {
       setFormData({ ...formData, [name]: files[0] });
     } else {
       setFormData({ ...formData, [name]: value });
@@ -61,50 +58,65 @@ const Form = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const formRef = push(ref(db, "applications"));
-    const key = formRef.key;
 
-    const uploadFile = async (file, path) => {
-      if (file) {
-        const storageReference = storageRef(storage, `documents/${key}/${path}`);
-        await uploadBytes(storageReference, file);
+    const formDataToSend = { ...formData };
+    const formDataObject = new FormData();
+
+    // Append JSON data
+    formDataObject.append("formData", JSON.stringify(formDataToSend));
+
+    // Append files
+    if (formData.idProof) formDataObject.append("idProof", formData.idProof);
+    if (formData.casteCertificate) formDataObject.append("casteCertificate", formData.casteCertificate);
+    if (formData.noObjectionCertificate) formDataObject.append("noObjectionCertificate", formData.noObjectionCertificate);
+    if (formData.pwdCertificate) formDataObject.append("pwdCertificate", formData.pwdCertificate);
+
+    formData.education.forEach((edu, index) => {
+      if (edu.marksCard) {
+        formDataObject.append("educationMarksCards", edu.marksCard);
       }
-    };
-
-    await uploadFile(formData.idProof, "idProof");
-    await uploadFile(formData.casteCertificate, "casteCertificate");
-    await uploadFile(formData.noObjectionCertificate, "noObjectionCertificate");
-    await uploadFile(formData.pwdCertificate, "pwdCertificate");
-
-    for (let i = 0; i < formData.education.length; i++) {
-      await uploadFile(formData.education[i].marksCard, `education/${i}/marksCard`);
-    }
-
-    for (let i = 0; i < formData.experience.length; i++) {
-      await uploadFile(formData.experience[i].experienceCertificate, `experience/${i}/experienceCertificate`);
-    }
-
-    await set(formRef, formData);
-    alert("Form submitted successfully!");
-    setFormData({
-      name: "",
-      fatherHusbandName: "",
-      dob: "",
-      nationality: "",
-      address: "",
-      pincode: "",
-      mobile: "",
-      email: "",
-      idProof: null,
-      casteCertificate: null,
-      postalOrder: "",
-      education: [{ class: "", board: "", year: "", subjects: "", percentage: "", marksCard: null }],
-      experience: [
-        { post: "", employer: "", period: "", natureOfWork: "", salary: "", remainder: "", experienceCertificate: null },
-      ],
-      noObjectionCertificate: null,
-      pwdCertificate: null,
     });
+
+    formData.experience.forEach((exp, index) => {
+      if (exp.experienceCertificate) {
+        formDataObject.append("experienceCertificates", exp.experienceCertificate);
+      }
+    });
+
+    try {
+      const response = await fetch("http://localhost:5000/api/submitForm", {
+        method: "POST",
+        body: formDataObject,
+      });
+
+      if (response.ok) {
+        alert("Form submitted successfully!");
+        setFormData({
+          name: "",
+          fatherHusbandName: "",
+          dob: "",
+          nationality: "",
+          address: "",
+          pincode: "",
+          mobile: "",
+          email: "",
+          idProof: null,
+          casteCertificate: null,
+          postalOrder: "",
+          education: [{ class: "", board: "", year: "", subjects: "", percentage: "", marksCard: null }],
+          experience: [
+            { post: "", employer: "", period: "", natureOfWork: "", salary: "", remainder: "", experienceCertificate: null },
+          ],
+          noObjectionCertificate: null,
+          pwdCertificate: null,
+        });
+      } else {
+        alert("Failed to submit the form.");
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert("Error submitting the form.");
+    }
   };
 
   return (
@@ -183,11 +195,11 @@ const Form = () => {
         Add More Experience
       </button>
       <div>
-        <label>No Objection Certificate (if applicable):</label>
+        <label>No Objection Certificate:</label>
         <input type="file" name="noObjectionCertificate" onChange={handleChange} />
       </div>
       <div>
-        <label>PWD Certificate (if applicable):</label>
+        <label>PwD Certificate:</label>
         <input type="file" name="pwdCertificate" onChange={handleChange} />
       </div>
       <button type="submit">Submit</button>

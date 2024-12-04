@@ -1,0 +1,111 @@
+/* General Styles */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+}
+
+/* Dashboard Page Styles */
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Header Section */
+.header {
+    background-color: #002366; /* Dark Blue */
+    color: white;
+    padding: 10px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header .logo {
+    display: flex;
+    align-items: center;
+}
+
+.header .logo img {
+    height: 50px;
+    margin-right: 10px;
+}
+
+.header .logo h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+/* Logout Button */
+.logout-btn {
+    background-color: #0047AB;
+    color: white;
+    font-size: 16px;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.logout-btn:hover {
+    background-color: #003680;
+}
+
+/* Navigation Bar */
+.navbar {
+    background-color: #0047AB; /* Medium Blue */
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.navbar a {
+    color: white;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: 500;
+    padding: 10px 20px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.navbar a:hover {
+    background-color: #003680; /* Darker Blue */
+    border-radius: 5px;
+    transform: scale(1.1); /* Slight Zoom Effect */
+}
+
+/* Content Section */
+.content {
+    text-align: center;
+    padding: 50px 20px;
+    background: linear-gradient(to right, #002366, #0047AB); /* Gradient Background */
+    color: white;
+}
+
+.content h1 {
+    font-size: 36px;
+    margin-bottom: 20px;
+}
+
+.content p {
+    font-size: 18px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .navbar {
+        flex-wrap: wrap;
+    }
+
+    .navbar a {
+        font-size: 16px;
+        padding: 8px 15px;
+    }
+
+    .header .logo h1 {
+        font-size: 20px;
+    }
+}
+
